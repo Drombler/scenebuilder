@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2019, Gluon and/or its affiliates.
  * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
@@ -36,8 +37,12 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoubleArrayPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ListValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+
+import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.SplitPane;
+import javafx.stage.Window;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,7 +59,7 @@ class FXOMRefresher {
     public void refresh(FXOMDocument document) {
         String fxmlText = null;
         try {
-            fxmlText = document.getFxmlText();
+            fxmlText = document.getFxmlText(false);
             final FXOMDocument newDocument
                     = new FXOMDocument(fxmlText,
                     document.getLocation(),
@@ -110,11 +115,21 @@ class FXOMRefresher {
     private void refreshDocument(FXOMDocument currentDocument, FXOMDocument newDocument) {
         // Transfers scene graph object from newDocument to currentDocument
         currentDocument.setSceneGraphRoot(newDocument.getSceneGraphRoot());
+        // Transfers display node from newDocument to currentDocument
+        currentDocument.setDisplayNode(newDocument.getDisplayNode());
+        // Transfers display stylesheets from newDocument to currentDocument
+        currentDocument.setDisplayStylesheets(newDocument.getDisplayStylesheets());
         // Simulates Scene's behavior : automatically adds "root" styleclass if
-        // if the scene graph root is a Parent instance
+        // if the scene graph root is a Parent instance or wraps a Parent instance
         if (currentDocument.getSceneGraphRoot() instanceof Parent) {
             final Parent rootParent = (Parent) currentDocument.getSceneGraphRoot();
             rootParent.getStyleClass().add(0, "root");
+        } else if (currentDocument.getSceneGraphRoot() instanceof Scene
+                || currentDocument.getSceneGraphRoot() instanceof Window) {
+            Node displayNode = currentDocument.getDisplayNode();
+            if (displayNode != null && displayNode instanceof Parent) {
+                displayNode.getStyleClass().add(0, "root");
+            }
         }
         // Recurses
         if (currentDocument.getFxomRoot() != null) {

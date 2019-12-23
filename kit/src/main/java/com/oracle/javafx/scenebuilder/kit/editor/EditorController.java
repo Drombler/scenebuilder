@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Gluon and/or its affiliates.
+ * Copyright (c) 2017, 2019, Gluon and/or its affiliates.
  * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
@@ -120,7 +120,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.Control;
 import javafx.scene.effect.Effect;
 import javafx.scene.input.Clipboard;
@@ -203,7 +202,9 @@ public class EditorController {
         WRAP_IN_TILE_PANE,
         WRAP_IN_TITLED_PANE,
         WRAP_IN_TOOL_BAR,
-        WRAP_IN_VBOX
+        WRAP_IN_VBOX,
+        WRAP_IN_SCENE,
+        WRAP_IN_STAGE
     }
     
     /**
@@ -345,8 +346,9 @@ public class EditorController {
      * Returns null or the fxml content being edited by this editor.
      * 
      * @return null or the fxml content being edited by this editor.
+     * @param wildcardImports If the FXML should have wildcards in its imports.
      */
-    public String getFxmlText() {
+    public String getFxmlText(boolean wildcardImports) {
         final String result;
         
         final FXOMDocument fxomDocument = getFxomDocument();
@@ -357,7 +359,7 @@ public class EditorController {
             if (sampleDataEnabled) {
                 fxomDocument.setSampleDataEnabled(false);
             }
-            result = fxomDocument.getFxmlText();
+            result = fxomDocument.getFxmlText(wildcardImports);
             if (sampleDataEnabled) {
                 fxomDocument.setSampleDataEnabled(true);
             }
@@ -541,7 +543,7 @@ public class EditorController {
 
     // -- Theme property
     private final ObjectProperty<Theme> themeProperty
-            = new SimpleObjectProperty<Theme>(EditorPlatform.DEFAULT_THEME) {
+            = new SimpleObjectProperty<>(EditorPlatform.DEFAULT_THEME) {
         @Override
         protected void invalidated() {
             FXOMDocument fxomDocument = getFxomDocument();
@@ -1272,6 +1274,14 @@ public class EditorController {
                 performWrap(javafx.scene.layout.VBox.class);
                 break;
             }
+            case WRAP_IN_SCENE: {
+                performWrap(javafx.scene.Scene.class);
+                break;
+            }
+            case WRAP_IN_STAGE: {
+                performWrap(javafx.stage.Stage.class);
+                break;
+            }
             default:
                 throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
         }
@@ -1522,6 +1532,14 @@ public class EditorController {
             }
             case WRAP_IN_VBOX: {
                 result = canPerformWrap(javafx.scene.layout.VBox.class);
+                break;
+            }
+            case WRAP_IN_SCENE: {
+                result = canPerformWrap(javafx.scene.Scene.class);
+                break;
+            }
+            case WRAP_IN_STAGE: {
+                result = canPerformWrap(javafx.stage.Stage.class);
                 break;
             }
             default:
@@ -1821,7 +1839,7 @@ public class EditorController {
      * 
      * @param wrappingClass the wrapping class
      */
-    public void performWrap(Class<? extends Parent> wrappingClass) {
+    public void performWrap(Class<?> wrappingClass) {
         assert canPerformWrap(wrappingClass);
         final AbstractWrapInJob job = AbstractWrapInJob.getWrapInJob(this, wrappingClass);
         jobManager.push(job);
@@ -1833,7 +1851,7 @@ public class EditorController {
      * @param wrappingClass the wrapping class.
      * @return true if the 'wrap' action is permitted.
      */
-    public boolean canPerformWrap(Class<? extends Parent> wrappingClass) {
+    public boolean canPerformWrap(Class<?> wrappingClass) {
         if (getClassesSupportingWrapping().contains(wrappingClass) == false) {
             return false;
         }
@@ -1841,7 +1859,7 @@ public class EditorController {
         return job.isExecutable();
     }
 
-    private static List<Class<? extends Parent>> classesSupportingWrapping;
+    private static List<Class<?>> classesSupportingWrapping;
 
     /**
      * Return the list of classes that can be passed to 
@@ -1849,7 +1867,7 @@ public class EditorController {
      * 
      * @return the list of classes.
      */
-    public synchronized static Collection<Class<? extends Parent>> getClassesSupportingWrapping() {
+    public synchronized static Collection<Class<?>> getClassesSupportingWrapping() {
         if (classesSupportingWrapping == null) {
             classesSupportingWrapping = new ArrayList<>();
             classesSupportingWrapping.add(javafx.scene.layout.AnchorPane.class);
@@ -1870,6 +1888,8 @@ public class EditorController {
             classesSupportingWrapping.add(javafx.scene.control.TitledPane.class);
             classesSupportingWrapping.add(javafx.scene.control.ToolBar.class);
             classesSupportingWrapping.add(javafx.scene.layout.VBox.class);
+            classesSupportingWrapping.add(javafx.scene.Scene.class);
+            classesSupportingWrapping.add(javafx.stage.Stage.class);
             classesSupportingWrapping = Collections.unmodifiableList(classesSupportingWrapping);
         }
         
